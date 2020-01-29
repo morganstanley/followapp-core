@@ -20,11 +20,11 @@ CREATE TABLE prescription_reference (
 );
 
 CREATE TABLE call_config (
-	call_config 	int 		NOT NULL AUTO_INCREMENT,
+	call_config_id	int 		NOT NULL AUTO_INCREMENT,
 	call_type 					varchar(50) NOT NULL,
 	call_flow_id 				varchar(50) NOT NULL,
-	gap_btwn_retires 			int 		NULL,
-	max_number_of_retires 		int 		NULL,
+	gap_btwn_retries 			int 		NULL,
+	max_number_of_retries 		int 		NULL,
     capture_feedback            bit         NOT NULL;
 	PRIMARY KEY (call_config_id)
     );
