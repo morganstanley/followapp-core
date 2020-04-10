@@ -41,8 +41,8 @@ public class CallingService {
 		Objects.requireNonNull(phoneNumber, "Phone number to be called cannot be null");
 		if (phoneNumber.length() != 11) {
 			throw new IllegalArgumentException(
-					"Phone number is not in the required format. " + "It should be 11 digits long. "
-							+ "Try appending a leading 0 to the phone number, " + "in case it is only 10 digits long.");
+					"Phone number is not in the required format. It should be 11 digits long. "
+							+ "Try appending a leading 0 to the phone number, in case it is only 10 digits long.");
 		}
 		CallResult callResult = new CallResult(callDetails);
         List<String> audioFiles = getAudioFiles(callDetails);

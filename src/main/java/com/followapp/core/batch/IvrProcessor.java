@@ -23,17 +23,16 @@ public class IvrProcessor implements ItemProcessor<CallDetails, CallResult> {
     private Boolean isCallMocked;
     
     public CallResult process(CallDetails callDetails) throws Exception {
-	CallResult callResult = callGuardian(callDetails);
-	return callResult;
+        CallResult callResult = callGuardian(callDetails);
+        return callResult;
     }
 
     private CallResult callGuardian(CallDetails callDetails) {
-	if (isCallMocked) {
-	    LOG.info("Call is being mocked. No call will actually be made");
-	    return new CallResult(callDetails);
-	}
-	else {
-	    return callingService.callUser(callDetails);
-	}
+        if (isCallMocked) {
+            LOG.info("Call is being mocked. No call will actually be made");
+            return new CallResult(callDetails);
+        } else {
+            return callingService.callUser(callDetails);
+        }
     }
 }
