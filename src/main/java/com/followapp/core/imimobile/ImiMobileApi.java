@@ -1,7 +1,7 @@
 package com.followapp.core.imimobile;
 
 
-import com.followapp.core.model.CallDetails;
+import com.followapp.core.services.CallingServiceApiAttributes;
 import com.followapp.core.services.ICallingServiceApi;
 import com.followapp.core.services.IMessagingServiceApi;
 import org.apache.commons.io.IOUtils;
@@ -60,12 +60,13 @@ public class ImiMobileApi implements ICallingServiceApi, IMessagingServiceApi {
         this.senderAddress = senderAddress;
     }
 
-    public String call(String phoneNumber, List<String> audioFiles, CallDetails callDetails) {
+    @Override
+    public String call(String phoneNumber, List<String> audioFiles, CallingServiceApiAttributes callingServiceApiAttributes) {
         try (CloseableHttpClient client = HttpClientBuilder.create()
                 .setRetryHandler(new DefaultHttpRequestRetryHandler()).build()) {
             HttpPost callRequest = null;
             try {
-                callRequest = createRequest(phoneNumber, audioFiles, callDetails);
+                callRequest = createRequest(phoneNumber, audioFiles, callingServiceApiAttributes.getCallFlowId(), callingServiceApiAttributes.getCallBackEndpoint());
                 LOG.info("Request {}", callRequest);
                 Optional<HttpResponse> callResponse = Optional.ofNullable(client.execute(callRequest));
 
@@ -162,7 +163,7 @@ public class ImiMobileApi implements ICallingServiceApi, IMessagingServiceApi {
         }
     }
 
-    private HttpPost createRequest(String phoneNumber, List<String> audioFiles, CallDetails callDetails) throws UnsupportedEncodingException {
+    private HttpPost createRequest(String phoneNumber, List<String> audioFiles, String callFlowId, String callBackEndpoint) throws UnsupportedEncodingException {
         HttpPost callRequest = new HttpPost("http://api-openhouse.imimobile.com/1/obd/thirdpartycall/callSessions");
         callRequest.addHeader(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded");
 
@@ -170,10 +171,10 @@ public class ImiMobileApi implements ICallingServiceApi, IMessagingServiceApi {
         List<NameValuePair> postParams = new ArrayList<>();
         postParams.add(new BasicNameValuePair("address", phoneNumber));
         postParams.add(new BasicNameValuePair("mode", "Callflow"));
-        postParams.add(new BasicNameValuePair("callflow_id", callDetails.getCallFlowId()));            //retrieving value dynamically
+        postParams.add(new BasicNameValuePair("callflow_id", callFlowId));            //retrieving value dynamically
         postParams.add(new BasicNameValuePair("externalHeaders", getExternalHeaders(audioFiles)));
         postParams.add(new BasicNameValuePair("externalParams", "_esb_trans_id,_errorcode,_dtmf"));
-        postParams.add(new BasicNameValuePair("callbackurl", String.join(this.domain, callDetails.getCallbackEndPoint())));    //retrieving value dynamically
+        postParams.add(new BasicNameValuePair("callbackurl", String.join(this.domain, callBackEndpoint)));    //retrieving value dynamically
 
         callRequest.setEntity(new UrlEncodedFormEntity(postParams));
         return callRequest;

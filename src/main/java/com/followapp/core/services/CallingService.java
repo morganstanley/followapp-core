@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import com.followapp.core.imimobile.ImiMobileApi;
 import com.followapp.core.imimobile.ImiMobileApiException;
 import com.followapp.core.model.CallDetails;
 import com.followapp.core.model.CallResult;
@@ -29,13 +28,6 @@ public class CallingService {
         this.imiMobileApi = imiMobileApi;
     }
 
-	/**
-	 * Call the specified phone number
-	 * 
-	 * @param phoneNumber
-	 *            The number that will be called
-	 * @return
-	 */
 	public CallResult callUser(CallDetails callDetails) {
 		String phoneNumber = callDetails.getPhoneNumber();
 		Objects.requireNonNull(phoneNumber, "Phone number to be called cannot be null");
@@ -47,7 +39,8 @@ public class CallingService {
 		CallResult callResult = new CallResult(callDetails);
         List<String> audioFiles = getAudioFiles(callDetails);
         try {
-            String id = imiMobileApi.call(phoneNumber, audioFiles, callDetails);
+            String id = imiMobileApi.call(phoneNumber, audioFiles, CallingServiceApiAttributes.aCallingServiceApiAttributes()
+                    .callFlowId(callDetails.getCallFlowId()).callBackEndpoint(callDetails.getCallbackEndPoint()).build());
             callResult.setSid(id);
             callResult.setCallStatus(CallStatus.HUNG_UP);
         } catch (ImiMobileApiException exception) {
@@ -56,8 +49,8 @@ public class CallingService {
             return null;
         }        
         LOG.info("Returning call result: " + callResult);
-		return callResult;
-	}
+        return callResult;
+    }
 
     private List<String> getAudioFiles(CallDetails callDetails) {
         List<String> audioFiles = new ArrayList<>();
@@ -69,11 +62,8 @@ public class CallingService {
         audioFiles.add(getFileNameAudioStorageFormat(callDetails.getPrescriptionYear()));
         return audioFiles;
     }
-    
-	private String getFileNameAudioStorageFormat(String audioFileName) {
-	    return StringUtils.lowerCase(StringUtils.replace(audioFileName, " ", "_"));
-	}
 
-	
-	
+    private String getFileNameAudioStorageFormat(String audioFileName) {
+        return StringUtils.lowerCase(StringUtils.replace(audioFileName, " ", "_"));
+    }
 }
