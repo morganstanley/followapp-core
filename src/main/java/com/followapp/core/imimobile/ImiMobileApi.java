@@ -4,6 +4,7 @@ package com.followapp.core.imimobile;
 import com.followapp.core.services.CallingServiceApiAttributes;
 import com.followapp.core.services.ICallingServiceApi;
 import com.followapp.core.services.IMessagingServiceApi;
+import com.google.gson.Gson;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
@@ -33,6 +34,8 @@ import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.UUID;
@@ -49,6 +52,8 @@ public class ImiMobileApi implements ICallingServiceApi, IMessagingServiceApi {
     private final String senderName;
 
     private final String senderAddress;
+
+    private final Gson gson = new Gson();
 
     public ImiMobileApi(@Value("${app.imimobile.key}") String key,
                         @Value("${app.domainName}") String domain,
@@ -96,10 +101,35 @@ public class ImiMobileApi implements ICallingServiceApi, IMessagingServiceApi {
         }
     }
 
+    /**
+     * Sample response from IMI sms service
+     * {
+     *   "outboundSMSMessageRequest": {
+     *     "deliveryInfoList": {
+     *       "deliveryInfo": {
+     *         "address": "7405280110",
+     *         "deliveryStatus": "Submitted"
+     *       },
+     *       "resourceURL": "http://api-openhouse.imimobile.com/smsmessaging/1/outbound/SNEHAG/requests/urn:uuid:46f415df-155f-4eea-8ed7-91b87dd15f88/deliveryInfos"
+     *     },
+     *     "senderAddress": "SNEHAG",
+     *     "outboundSMSTextMessage": {
+     *       "message": "Test Message"
+     *     },
+     *     "clientCorrelator": "2764b266-d81d-4e45-a6eb-5c071150399e",
+     *     "receiptRequest": {
+     *       "notifyURL": "",
+     *       "callbackData": ""
+     *     },
+     *     "senderName": "Meherzad",
+     *     "resourceURL": "http://api-openhouse.imimobile.com/smsmessaging/1/outbound/SNEHAG/requests/urn:uuid:46f415df-155f-4eea-8ed7-91b87dd15f88"
+     *   }
+     * }
+     */
     @Override
-    public void sendMessage(String phoneNumber, String messageText) {
+    public String sendMessage(String phoneNumber, String messageText) {
         if (StringUtils.length(phoneNumber) != 10) {
-            throw new RuntimeException("Supports only 10 digit cell phone number " + phoneNumber);
+            throw new ImiMobileApiException("Supports only 10 digit cell phone number " + phoneNumber);
         }
         String stringUrl = String.format("http://api-openhouse.imimobile.com/smsmessaging/1/outbound/%s/requests",
                 URLEncoder.encode(formatPhoneNumber(senderAddress, true)));
@@ -127,9 +157,15 @@ public class ImiMobileApi implements ICallingServiceApi, IMessagingServiceApi {
             StringWriter createUserwriter = new StringWriter();
             IOUtils.copy(createUserInputStream, createUserwriter, Charset.defaultCharset());
             outResponse = createUserwriter.toString();
-            LOG.debug("Successfully called phoneNumber {}, status {}, outResponse {}", phoneNumber, userResponseCode, outResponse);
+            LOG.debug("Successfully submitted sms request for phoneNumber {}, status {}, outResponse {}", phoneNumber, userResponseCode, outResponse);
+            Map map = gson.fromJson(outResponse, Map.class);
+            Optional<Map> response = map.values().stream().findFirst().filter(Map.class::isInstance).map(Map.class::cast);
+            outResponse = response.map(resp -> Objects.toString(resp.get("resourceURL"), null))
+                    .map(d-> StringUtils.substring(d, StringUtils.lastIndexOf(d, "/")+1)).orElse("");
+            return outResponse;
         } catch (Exception exception) {
             LOG.error(String.format("Failure while sending message - %s - %s", phoneNumber, outResponse), exception);
+            throw new ImiMobileApiException(String.format("Failure while sending message - %s - %s", phoneNumber, outResponse), exception);
         }
     }
 

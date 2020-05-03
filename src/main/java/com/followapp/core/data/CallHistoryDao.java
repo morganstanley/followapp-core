@@ -20,7 +20,7 @@ public class CallHistoryDao {
 
 	private static final Logger LOG = LoggerFactory.getLogger(CallHistoryDao.class);
 	private static final String SAVE_CALL_HISTORY = "call update_call_status( ?, ?, ?, CURDATE(), ?)";
-	private static final String SAVE_CALL_DURATION = "Update call_history SET CALL_DURATION = ? WHERE ivr_call_id = ?";
+	private static final String SAVE_CALL_DURATION = "Update schedule_run SET call_duration = ? WHERE ivr_request_id = ?";
 
 	@Autowired
 	private JdbcTemplate jdbcTemplate;

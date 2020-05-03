@@ -1,5 +1,8 @@
 package com.followapp.core.services;
 
+import com.followapp.core.imimobile.ImiMobileApiException;
+import com.followapp.core.model.ScheduleDetail;
+import com.followapp.core.model.ScheduleRun;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +20,17 @@ public class MessagingService {
         this.messagingServiceApi = messagingServiceApi;
     }
 
-    public void messageUser(String phoneNumber, String message) {
-        this.messagingServiceApi.sendMessage(phoneNumber, message);
+    public ScheduleRun messageUser(ScheduleDetail scheduleDetail) {
+        ScheduleRun scheduleRun;
+        try {
+            String ivrRequestId = this.messagingServiceApi.sendMessage(scheduleDetail.getRecipientMobileNumber(),
+                    scheduleDetail.getSmsText());
+            scheduleRun = ScheduleRun.aSuccessfulScheduleRun(scheduleDetail, ivrRequestId);
+        } catch (ImiMobileApiException exception) {
+            LOG.error(String.format("Error while calling %s ", scheduleDetail.getRecipientMobileNumber()), exception);
+            scheduleRun = ScheduleRun.aFailedScheduleRun(scheduleDetail);
+        }
+        LOG.info("Returning schedule run: {}", scheduleRun);
+        return scheduleRun;
     }
 }
