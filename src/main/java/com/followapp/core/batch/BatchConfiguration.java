@@ -1,5 +1,8 @@
 package com.followapp.core.batch;
 
+import com.followapp.core.data.ScheduleRunPreparedStatementSetter;
+import com.followapp.core.model.ScheduleDetail;
+import com.followapp.core.model.ScheduleRun;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.JobRegistry;
@@ -14,51 +17,60 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.annotation.PropertySources;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.PreparedStatementSetter;
 
-import com.followapp.core.mappers.CallDetailsRowMapper;
-import com.followapp.core.data.CallResultPreparedStatementSetter;
-import com.followapp.core.model.CallDetails;
-import com.followapp.core.model.CallResult;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 @Configuration
 @PropertySources({
-	@PropertySource("classpath:application-${envTarget:staging}.properties"),
-	@PropertySource("${propertiesFile.path}")
+        @PropertySource("classpath:application-${envTarget:staging}.properties"),
+        @PropertySource("${propertiesFile.path}")
 })
 public class BatchConfiguration {
 
     @Autowired
     public JdbcTemplate jdbcTemplate;
-	
+
     @Autowired
     public JobBuilderFactory jobBuilderFactory;
-    
+
     @Autowired
     public StepBuilderFactory stepBuilderFactory;
 
     @Autowired
     public IvrProcessor ivrProcessor;
-    
+
     @Autowired
-    public CallResultPreparedStatementSetter callResultPss;
-    
-    public static final String JOB_NAME="reminderJob";
-    
-    //Param Seq : IVR_CALL_ID , CARE_RECIPIENT_ID, P_prescription_details_id , P_DATE_TIME_CALLED , P_CALL_STATUS
-    private static final String UPDATE_CALL_RESULT = "call update_call_status(?, ?, ?,CURDATE(), ?)" ;
-    
+    public ScheduleRunPreparedStatementSetter scheduleRunPreparedStatementSetter;
+
+    public static final String JOB_NAME = "reminderJob";
+
+    //Param Seq : ScheduleId, RecipientId, IvrRequestId, RunDateTime, Status, UpdateDateTime
+    private static final String UPDATE_SCHEDULE_RUN = "call update_schedule_run(?, ?, ?, ?, ?, ?)";
+
     //Param Seq: P_DATE_TIME
-    private static final String GET_CALL_DETAILS_LIST = "call get_call_details(CURDATE())";
-    
+    private static final String GET_SCHEDULE_DETAILS_LIST = "call get_schedule_detail(?)";
+
     @Bean
     @StepScope
-    public JdbcCursorItemReader<CallDetails> reader() {
-    	JdbcCursorItemReader<CallDetails> reader = new JdbcCursorItemReader<>();
-    	reader.setDataSource(jdbcTemplate.getDataSource());
-    	reader.setSql(GET_CALL_DETAILS_LIST);
-    	reader.setRowMapper(new CallDetailsRowMapper());
-    	return reader;
+    public JdbcCursorItemReader<ScheduleDetail> reader() {
+        JdbcCursorItemReader<ScheduleDetail> reader = new JdbcCursorItemReader<>();
+        reader.setDataSource(jdbcTemplate.getDataSource());
+        reader.setSql(GET_SCHEDULE_DETAILS_LIST);
+        reader.setPreparedStatementSetter(new PreparedStatementSetter() {
+            @Override
+            public void setValues(PreparedStatement preparedStatement) throws SQLException {
+                preparedStatement.setTimestamp(1, Timestamp.valueOf(LocalDateTime.now(ZoneOffset.UTC)));
+            }
+        });
+        reader.setRowMapper(new BeanPropertyRowMapper<>(ScheduleDetail.class));
+        return reader;
     }
 
     @Bean
@@ -66,12 +78,11 @@ public class BatchConfiguration {
         return ivrProcessor;
     }
 
-
     @Bean
-    public JdbcBatchItemWriter<CallResult> writer() {
-        JdbcBatchItemWriter<CallResult> writer = new JdbcBatchItemWriter<>();
-        writer.setItemPreparedStatementSetter(callResultPss);
-        writer.setSql(UPDATE_CALL_RESULT);
+    public JdbcBatchItemWriter<ScheduleRun> writer() {
+        JdbcBatchItemWriter<ScheduleRun> writer = new JdbcBatchItemWriter<>();
+        writer.setItemPreparedStatementSetter(scheduleRunPreparedStatementSetter);
+        writer.setSql(UPDATE_SCHEDULE_RUN);
         writer.setDataSource(jdbcTemplate.getDataSource());
         writer.setAssertUpdates(false);
         return writer;
@@ -88,13 +99,13 @@ public class BatchConfiguration {
     @Bean
     public Step reminderStep() {
         return stepBuilderFactory.get("step1")
-                .<CallDetails, CallResult> chunk(1)
+                .<ScheduleDetail, ScheduleRun>chunk(1)
                 .reader(reader())
                 .processor(processor())
                 .writer(writer())
                 .build();
     }
-    
+
     @Bean
     public JobRegistryBeanPostProcessor jobRegistryBeanPostProcessor(JobRegistry jobRegistry) {
         JobRegistryBeanPostProcessor jobRegistryBeanPostProcessor = new JobRegistryBeanPostProcessor();

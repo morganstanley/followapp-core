@@ -1,8 +1,12 @@
 package com.followapp.core.api;
 
-import java.util.Arrays;
-import java.util.Optional;
-
+import com.followapp.core.data.CallHistoryDao;
+import com.followapp.core.model.CallResult;
+import com.followapp.core.model.CallStatus;
+import com.followapp.core.model.ImiMobileResponse;
+import com.followapp.core.model.ScheduleDetail;
+import com.followapp.core.model.ScheduleRun;
+import com.followapp.core.services.CallingService;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,12 +22,8 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.followapp.core.data.CallHistoryDao;
-import com.followapp.core.model.CallDetails;
-import com.followapp.core.model.CallResult;
-import com.followapp.core.model.CallStatus;
-import com.followapp.core.model.ImiMobileResponse;
-import com.followapp.core.services.CallingService;
+import java.util.Arrays;
+import java.util.Optional;
 
 /**
  * Root resource (exposed at "API" path)
@@ -32,66 +32,60 @@ import com.followapp.core.services.CallingService;
 @RequestMapping(value = "api")
 public class CallController {
 
-	private static final Logger LOG = LoggerFactory.getLogger(CallController.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CallController.class);
 
-	@Autowired
-	private CallingService callingService;
+    @Autowired
+    private CallingService callingService;
 
-	@Autowired
-	private JdbcBatchItemWriter<CallResult> writer;
+    @Autowired
+    private JdbcBatchItemWriter<ScheduleRun> writer;
 
-	@Autowired
-	private CallHistoryDao callHistoryDao;
+    @Autowired
+    private CallHistoryDao callHistoryDao;
 
-	@RequestMapping(value = "test", method = RequestMethod.GET, produces = MediaType.TEXT_PLAIN_VALUE)
-	public ResponseEntity<String> testSomething() {
-		return new ResponseEntity<String>("Hello\nService is up!", HttpStatus.OK);
-	}
+    @RequestMapping(value = "test", method = RequestMethod.GET, produces = MediaType.TEXT_PLAIN_VALUE)
+    public ResponseEntity<String> testSomething() {
+        return new ResponseEntity<String>("Hello\nService is up!", HttpStatus.OK);
+    }
 
-	/**
-	 * Makes a call to the specified user, and initialises the audio to be
-	 * played when the user picks up
-	 * 
-	 * IF all goes well, sends back a 200 OK If the CallResult cannot be
-	 * persisted to the db, sends back a 500 INTERNAL_SERVER_ERROR
-	 * 
-	 * @param input
-	 *            A String containing the JSON representation of
-	 *            {@link com.ms.technophilia.followapp.dataobj.CallDetails}
-	 * @return
-	 */
-	@RequestMapping(value = "call", method = RequestMethod.POST)
-	public ResponseEntity<String> callUser(@RequestBody CallDetails callDetails) {
-		LOG.info("[call] Got JSON input: " + callDetails);
+    /**
+     * Makes a call to the specified user, and initialises the audio to be
+     * played when the user picks up
+     * <p>
+     * IF all goes well, sends back a 200 OK If the CallResult cannot be
+     * persisted to the db, sends back a 500 INTERNAL_SERVER_ERROR
+     */
+    @RequestMapping(value = "call", method = RequestMethod.POST)
+    public ResponseEntity<String> callUser(@RequestBody ScheduleDetail scheduleDetail) {
+        LOG.info("[call] Got JSON input: " + scheduleDetail);
 
-		CallResult callResult = callingService.callUser(callDetails);
-		
-		try {
-			writer.write(Arrays.asList(callResult));
-			LOG.info("Persisted CallResult of UI initiated call to the database: " + callResult.toString());
-		} catch (Exception e) {
-			LOG.error("The CallResult from the UI initiated call has failed to be persisted in the database. "
-					+ "Please enter the details manually into the database. " + callResult.toString() + e.getMessage(),
-					e);
-			return new ResponseEntity<String>(
-					"The CallResult from the UI initiated call failed to be persisted to the database: "
-							+ callResult.toString(),
-					HttpStatus.INTERNAL_SERVER_ERROR);
-		}
+        ScheduleRun scheduleRun = callingService.callUser(scheduleDetail);
 
-		return new ResponseEntity<String>("Call to " + callDetails.getPhoneNumber() + " has been initiated", HttpStatus.OK);
-	}
+        try {
+            writer.write(Arrays.asList(scheduleRun));
+            LOG.info("Persisted CallResult of UI initiated call to the database: " + scheduleRun.toString());
+        } catch (Exception e) {
+            LOG.error("The CallResult from the UI initiated call has failed to be persisted in the database. "
+                            + "Please enter the details manually into the database. " + scheduleRun.toString() + e.getMessage(),
+                    e);
+            return new ResponseEntity<String>(
+                    "The CallResult from the UI initiated call failed to be persisted to the database: "
+                            + scheduleRun.toString(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        }
 
-	/**
-	 * Get user response back from Imimobile. As part if this response we will get the information if usered has pressed 1 or 2.
-	 * Call to this endpoint will come in form of <pre>
-	 * http://demo7307378.mockable.io/response?sid=1111111111_99999999999&MobileNo=09999999999&DTMF=2
-	 * </pre>
-	 * 
-	 */
+        return new ResponseEntity<String>("Call to " + scheduleDetail.getRecipientMobileNumber() + " has been initiated", HttpStatus.OK);
+    }
+
+    /**
+     * Get user response back from Imimobile. As part if this response we will get the information if usered has pressed 1 or 2.
+     * Call to this endpoint will come in form of <pre>
+     * http://demo7307378.mockable.io/response?sid=1111111111_99999999999&MobileNo=09999999999&DTMF=2
+     * </pre>
+     */
     @RequestMapping(value = "response", method = RequestMethod.GET)
     public ResponseEntity<String> getUserResponse(@RequestParam("MobileNo") String mobileNumber,
-            @RequestParam("DTMF") String input, @RequestHeader("x-imi-ivrs-_esb_trans_id") String uuid) {
+                                                  @RequestParam("DTMF") String input, @RequestHeader("x-imi-ivrs-_esb_trans_id") String uuid) {
         LOG.info("User input received for uuid {} mobile {} input {}", uuid, mobileNumber, input);
 
         CallResult callResult = new CallResult(uuid, getStatus(StringUtils.trim(input)));
@@ -126,13 +120,13 @@ public class CallController {
      *              </externalParams>
      *           </evt-info>
      *       </evt-notification>
-     *</response>}
-     *</pre>
+     * </response>}
+     * </pre>
      */
     @RequestMapping(value = "callresponse", method = RequestMethod.POST, produces = "text/dtmf")
     public ResponseEntity<String> getCallResponse(@RequestBody ImiMobileResponse response) {
         LOG.info("Call response received {}", response);
-        Optional<ImiMobileResponse> imiMobileResponse =  Optional.ofNullable(response);
+        Optional<ImiMobileResponse> imiMobileResponse = Optional.ofNullable(response);
         String uuid = imiMobileResponse.map(resp -> resp.getUuid()).orElse("-1");
         Integer callDuration = imiMobileResponse.map(resp -> resp.getEvt()).map(evt -> evt.getEvtInfo())
                 .map(evtInfo -> StringUtils.trim(evtInfo.getCallDuration()))

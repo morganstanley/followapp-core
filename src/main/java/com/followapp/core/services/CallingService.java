@@ -1,66 +1,65 @@
 package com.followapp.core.services;
 
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-
+import com.followapp.core.imimobile.ImiMobileApiException;
+import com.followapp.core.model.ScheduleDetail;
+import com.followapp.core.model.ScheduleRun;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import com.followapp.core.imimobile.ImiMobileApiException;
-import com.followapp.core.model.CallDetails;
-import com.followapp.core.model.CallResult;
-import com.followapp.core.model.CallStatus;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
 
 @Component
 public class CallingService {
 
-	private static final Logger LOG = LoggerFactory.getLogger(CallingService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(CallingService.class);
 
-	private final ICallingServiceApi imiMobileApi;
+    private final ICallingServiceApi imiMobileApi;
+
+    @Value("{app.imi.call.callBackEndpoint}")
+    private String callBackEndpoint;
+
+    @Value("app.imi.call.callFlowId")
+    private String callFlowId;
 
     @Autowired
     public CallingService(ICallingServiceApi imiMobileApi) {
         this.imiMobileApi = imiMobileApi;
     }
 
-	public CallResult callUser(CallDetails callDetails) {
-		String phoneNumber = callDetails.getPhoneNumber();
-		Objects.requireNonNull(phoneNumber, "Phone number to be called cannot be null");
-		if (phoneNumber.length() != 11) {
-			throw new IllegalArgumentException(
-					"Phone number is not in the required format. It should be 11 digits long. "
-							+ "Try appending a leading 0 to the phone number, in case it is only 10 digits long.");
-		}
-		CallResult callResult = new CallResult(callDetails);
-        List<String> audioFiles = getAudioFiles(callDetails);
+    public ScheduleRun callUser(ScheduleDetail scheduleDetail) {
+        String phoneNumber = scheduleDetail.getRecipientMobileNumber();
+        Objects.requireNonNull(phoneNumber, "Phone number to be called cannot be null");
+        if (phoneNumber.length() < 10) {
+            throw new IllegalArgumentException(
+                    "Phone number is not in the required format. It should be 11 digits long. "
+                            + "Try appending a leading 0 to the phone number, in case it is only 10 digits long.");
+        }
+        if (phoneNumber.length() == 10) {
+            phoneNumber = "0" + phoneNumber;
+        }
+        List<String> audioFiles = getAudioFiles(scheduleDetail);
+        ScheduleRun scheduleRun;
         try {
-            String id = imiMobileApi.call(phoneNumber, audioFiles, CallingServiceApiAttributes.aCallingServiceApiAttributes()
-                    .callFlowId(callDetails.getCallFlowId()).callBackEndpoint(callDetails.getCallbackEndPoint()).build());
-            callResult.setSid(id);
-            callResult.setCallStatus(CallStatus.HUNG_UP);
+            String ivrRequestId = imiMobileApi.call(phoneNumber, audioFiles, CallingServiceApiAttributes.aCallingServiceApiAttributes()
+                    .callFlowId(callFlowId).callBackEndpoint(callBackEndpoint).build());
+            scheduleRun = ScheduleRun.aSuccessfulScheduleRun(scheduleDetail, ivrRequestId);
         } catch (ImiMobileApiException exception) {
             LOG.error(String.format("Error while calling %s ", phoneNumber), exception);
-            callResult.setCallStatus(CallStatus.CALL_FAILED);
-            return null;
-        }        
-        LOG.info("Returning call result: " + callResult);
-        return callResult;
+            scheduleRun = ScheduleRun.aFailedScheduleRun(scheduleDetail);
+        }
+        LOG.info("Returning call result: {}", scheduleRun);
+        return scheduleRun;
     }
 
-    private List<String> getAudioFiles(CallDetails callDetails) {
-        List<String> audioFiles = new ArrayList<>();
-        audioFiles.add(getFileNameAudioStorageFormat(callDetails.getGuardianName()));
-        audioFiles.add(getFileNameAudioStorageFormat(callDetails.getChildName()));
-        audioFiles.add(getFileNameAudioStorageFormat(callDetails.getPrescriptionName()));
-        audioFiles.add(getFileNameAudioStorageFormat(callDetails.getPrescriptionDay()));
-        audioFiles.add(getFileNameAudioStorageFormat(callDetails.getPrescriptionMonth()));
-        audioFiles.add(getFileNameAudioStorageFormat(callDetails.getPrescriptionYear()));
-        return audioFiles;
+    private List<String> getAudioFiles(ScheduleDetail scheduleDetail) {
+        return Arrays.asList(getFileNameAudioStorageFormat(scheduleDetail.getAudioFileRelativePath()));
     }
 
     private String getFileNameAudioStorageFormat(String audioFileName) {
