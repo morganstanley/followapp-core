@@ -29,8 +29,8 @@ import java.time.ZoneOffset;
 
 @Configuration
 @PropertySources({
-        @PropertySource("classpath:application-prod.properties")/*,
-        @PropertySource("${propertiesFile.path}")*/
+        @PropertySource("classpath:application-${envTarget:staging}.properties"),
+        @PropertySource("${propertiesFile.path}")
 })
 public class BatchConfiguration {
 
