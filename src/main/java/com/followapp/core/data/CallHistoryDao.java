@@ -1,10 +1,7 @@
 package com.followapp.core.data;
 
 
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Types;
-
+import com.followapp.core.model.CallResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,17 +10,37 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCallback;
 import org.springframework.stereotype.Component;
 
-import com.followapp.core.model.CallResult;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.sql.Types;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 @Component
 public class CallHistoryDao {
 
-	private static final Logger LOG = LoggerFactory.getLogger(CallHistoryDao.class);
-	private static final String SAVE_CALL_HISTORY = "call update_call_status( ?, ?, ?, CURDATE(), ?)";
-	private static final String SAVE_CALL_DURATION = "Update schedule_run SET call_duration = ? WHERE ivr_request_id = ?";
+    private static final Logger LOG = LoggerFactory.getLogger(CallHistoryDao.class);
+    private static final String SAVE_CALL_HISTORY = "call update_call_status( ?, ?, ?, CURDATE(), ?)";
+    private static final String SAVE_CALL_DURATION = "Update schedule_run SET call_duration = ?, updated_datetime = ? WHERE ivr_request_id = ?";
+    private static final String SAVE_MESSAGE_STATUS = "Update schedule_run SET status = ?, updated_datetime = ? WHERE ivr_request_id = ?";
 
-	@Autowired
-	private JdbcTemplate jdbcTemplate;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    public void updateMessageStatus(final String ivrRequestId, final String scheduleRunStatus) {
+        LOG.info("Ivr Request Id {} message status {} ", ivrRequestId, scheduleRunStatus);
+
+        jdbcTemplate.execute(SAVE_MESSAGE_STATUS, new PreparedStatementCallback<Boolean>() {
+            @Override
+            public Boolean doInPreparedStatement(PreparedStatement ps) throws SQLException, DataAccessException {
+                ps.setString(1, scheduleRunStatus);
+                ps.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now(ZoneOffset.UTC)));
+                ps.setString(3, ivrRequestId);
+                return ps.execute();
+            }
+        });
+    }
 
     public void updateCallStatus(final CallResult callResult) {
         LOG.info("Updating call status for " + callResult);
@@ -53,7 +70,8 @@ public class CallHistoryDao {
             @Override
             public Boolean doInPreparedStatement(PreparedStatement ps) throws SQLException, DataAccessException {
                 ps.setInt(1, callDuration);
-                ps.setString(2, uuid);
+                ps.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now(ZoneOffset.UTC)));
+                ps.setString(3, uuid);
                 return ps.execute();
             }
         });

@@ -25,7 +25,7 @@ public class IvrProcessor implements ItemProcessor<ScheduleDetail, ScheduleRun> 
     @Autowired
     private MessagingService messagingService;
 
-    @Value("${app.calls.mocked}")
+    @Value("${app.calls.mocked:false}")
     private Boolean isCallMocked;
 
     public ScheduleRun process(ScheduleDetail scheduleDetail) throws Exception {

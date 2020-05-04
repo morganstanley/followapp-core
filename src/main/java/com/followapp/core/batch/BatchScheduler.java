@@ -18,31 +18,28 @@ import org.springframework.stereotype.Component;
 @Configuration
 @EnableScheduling
 public class BatchScheduler {
-	
-	private static final Logger LOG = LoggerFactory.getLogger(BatchScheduler.class);
-	
-	@Autowired
-	private JobLauncher jobLauncher;
 
-	@Autowired
-	private JobRegistry jobRegistry;
-	
-	public static final String JOB_NAME="reminderJob";
-	
-	//@Scheduled(cron = "0 5 10-19 * * *")
-	@Scheduled(cron = "0 ${app.scheduler.batchTriggerTime} 6 * * *")	// Start at 10 AM only
-	public void reportCurrentTime() {
-		LOG.info("Job Started");
-		JobParameters jobParameters = 
-				  new JobParametersBuilder()
-				  .addLong("time",System.currentTimeMillis()).toJobParameters();
-		try {
-			Job job = jobRegistry.getJob(JOB_NAME);
-			jobLauncher.run(job, jobParameters);
-		}
-		catch (Exception e) {
-			LOG.error("Exception while executing batch job." + e.getMessage(), e);
-		}
+    private static final Logger LOG = LoggerFactory.getLogger(BatchScheduler.class);
 
-	}
+    @Autowired
+    private JobLauncher jobLauncher;
+
+    @Autowired
+    private JobRegistry jobRegistry;
+
+    public static final String JOB_NAME = "reminderJob";
+
+    @Scheduled(cron = "0 ${app.scheduler.batchTriggerTime} 6 * * *")
+    public void reportCurrentTime() {
+        LOG.info("Job Started");
+        JobParameters jobParameters =
+                new JobParametersBuilder()
+                        .addLong("time", System.currentTimeMillis()).toJobParameters();
+        try {
+            Job job = jobRegistry.getJob(JOB_NAME);
+            jobLauncher.run(job, jobParameters);
+        } catch (Exception e) {
+            LOG.error("Exception while executing batch job." + e.getMessage(), e);
+        }
+    }
 }
