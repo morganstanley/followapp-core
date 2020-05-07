@@ -66,7 +66,7 @@ public class BatchConfiguration {
         reader.setPreparedStatementSetter(new PreparedStatementSetter() {
             @Override
             public void setValues(PreparedStatement preparedStatement) throws SQLException {
-                preparedStatement.setTimestamp(1, Timestamp.valueOf(LocalDateTime.now(ZoneOffset.UTC)));
+                preparedStatement.setTimestamp(1, Timestamp.valueOf(LocalDateTime.now()));
             }
         });
         reader.setRowMapper(new BeanPropertyRowMapper<>(ScheduleDetail.class));
