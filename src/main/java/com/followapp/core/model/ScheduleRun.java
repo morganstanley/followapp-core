@@ -1,7 +1,6 @@
 package com.followapp.core.model;
 
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.Objects;
 
 public class ScheduleRun {
@@ -112,8 +111,8 @@ public class ScheduleRun {
         scheduleRun.scheduleId = scheduleDetail.getScheduleId();
         scheduleRun.recipientId = scheduleDetail.getRecipientId();
         scheduleRun.ivrRequestId = ivrRequestId;
-        scheduleRun.runDateTime = LocalDateTime.now(ZoneOffset.UTC);
-        scheduleRun.updateDateTime = LocalDateTime.now(ZoneOffset.UTC);
+        scheduleRun.runDateTime = LocalDateTime.now();
+        scheduleRun.updateDateTime = LocalDateTime.now();
         scheduleRun.status = ScheduleRunStatus.IVR_REQUESTED;
         return scheduleRun;
     }
@@ -122,8 +121,8 @@ public class ScheduleRun {
         ScheduleRun scheduleRun = new ScheduleRun();
         scheduleRun.scheduleId = scheduleDetail.getScheduleId();
         scheduleRun.recipientId = scheduleDetail.getRecipientId();
-        scheduleRun.runDateTime = LocalDateTime.now(ZoneOffset.UTC);
-        scheduleRun.updateDateTime = LocalDateTime.now(ZoneOffset.UTC);
+        scheduleRun.runDateTime = LocalDateTime.now();
+        scheduleRun.updateDateTime = LocalDateTime.now();
         scheduleRun.status = ScheduleRunStatus.IVR_FAILURE;
         return scheduleRun;
     }
