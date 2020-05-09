@@ -186,7 +186,7 @@ public class ImiMobileApi implements ICallingServiceApi, IMessagingServiceApi {
                         "\"messageType\":\"0\"," +
                         "\"clientCorrelator\":\"%s\"," +
                         "\"receiptRequest\":\n" +
-                        "{\"notifyURL\":\"http://%s/api/smsresponse\",\n" +
+                        "{\"notifyURL\":\"%s/api/smsresponse\",\n" +
                         "\"callbackData\":\"$(callbackData)\"}," +
                         "\"senderName\":\"%s\"}" +
                         "}", formatPhoneNumber(phoneNumber, false), formatPhoneNumber(senderAddress, false), messageText,
@@ -213,7 +213,7 @@ public class ImiMobileApi implements ICallingServiceApi, IMessagingServiceApi {
         postParams.add(new BasicNameValuePair("callflow_id", callFlowId));            //retrieving value dynamically
         postParams.add(new BasicNameValuePair("externalHeaders", getExternalHeaders(audioFiles)));
         postParams.add(new BasicNameValuePair("externalParams", "_esb_trans_id,_errorcode,_dtmf"));
-        postParams.add(new BasicNameValuePair("callbackurl", String.join(this.domain, callBackEndpoint)));    //retrieving value dynamically
+        postParams.add(new BasicNameValuePair("callbackurl", String.format("%s%s", this.domain, callBackEndpoint)));    //retrieving value dynamically
 
         callRequest.setEntity(new UrlEncodedFormEntity(postParams));
         return callRequest;
