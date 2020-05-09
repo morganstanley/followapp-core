@@ -6,6 +6,10 @@ import com.followapp.core.model.CallStatus;
 import com.followapp.core.model.ImiMobileResponse;
 import com.followapp.core.model.ScheduleDetail;
 import com.followapp.core.model.ScheduleRun;
+import com.followapp.core.model.ScheduleRunStatus;
+import com.followapp.core.model.sms.DeliveryInfo;
+import com.followapp.core.model.sms.DeliveryInfoNotification;
+import com.followapp.core.model.sms.DeliveryStatus;
 import com.followapp.core.services.CallingService;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -133,6 +137,42 @@ public class CallController {
                 .filter(cd -> StringUtils.isNumeric(cd)).map(cd -> Integer.parseInt(cd)).orElse(-1);
 
         callHistoryDao.updateCallDuration(uuid, callDuration);
+        return ResponseEntity.ok("0");
+    }
+
+    /**
+     * Sms response from IMI
+     *
+     * {
+     *   "deliveryInfoNotification": {
+     *     "message": "TestMessageFromSneha",
+     *     "senderAddress": "SNEHAG",
+     *     "clientCorrelator": "",
+     *     "deliveryInfo": {
+     *       "address": "917405280110",
+     *       "errorCode": "0",
+     *       "deliveryDate": "2020-05-04 02:57:02",
+     *       "deliveryStatus": "Delivered"
+     *     },
+     *     "RequestId": "urn:uuid:39cfe68e-3e37-4296-93f7-6724d4f24413",
+     *     "callbackData": "$(callbackData)",
+     *     "serviceName": "API Explorer"
+     *   }
+     * }
+     */
+    @RequestMapping(value = "smsresponse", method = RequestMethod.POST)
+    public ResponseEntity<String> getSmsResponse(@RequestBody DeliveryStatus deliveryStatus) {
+        LOG.info("Sms response received {}", deliveryStatus);
+        Optional<String> ivrRequestId = Optional.ofNullable(deliveryStatus).map(DeliveryStatus::getDeliveryInfoNotification)
+                .map(DeliveryInfoNotification::getRequestId);
+        ivrRequestId.ifPresent(ivrRequest -> {
+            Optional<String> messageDeliveryStatus = Optional.ofNullable(deliveryStatus).map(DeliveryStatus::getDeliveryInfoNotification)
+                    .map(DeliveryInfoNotification::getDeliveryInfo).map(DeliveryInfo::getDeliveryStatus);
+            messageDeliveryStatus.ifPresent(status -> {
+                ScheduleRunStatus scheduleRunStatus = ScheduleRunStatus.find(status);
+                callHistoryDao.updateMessageStatus(ivrRequest, scheduleRunStatus.name());
+            });
+        });
         return ResponseEntity.ok("0");
     }
 

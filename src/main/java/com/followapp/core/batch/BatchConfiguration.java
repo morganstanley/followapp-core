@@ -52,10 +52,11 @@ public class BatchConfiguration {
     public static final String JOB_NAME = "reminderJob";
 
     //Param Seq : ScheduleId, RecipientId, IvrRequestId, RunDateTime, Status, UpdateDateTime
-    private static final String UPDATE_SCHEDULE_RUN = "call update_schedule_run(?, ?, ?, ?, ?, ?)";
+    private static final String UPDATE_SCHEDULE_RUN = "exec update_schedule_run @schedule_id=?, @recipient_id=?, " +
+            "@ivr_request_id=?, @run_date_time=?, @status=?, @update_datetime=?";
 
     //Param Seq: P_DATE_TIME
-    private static final String GET_SCHEDULE_DETAILS_LIST = "call get_schedule_detail(?)";
+    private static final String GET_SCHEDULE_DETAILS_LIST = "exec get_schedule_detail @p_run_date_time=?";
 
     @Bean
     @StepScope

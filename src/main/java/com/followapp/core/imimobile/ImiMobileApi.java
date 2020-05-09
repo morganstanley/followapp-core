@@ -57,8 +57,8 @@ public class ImiMobileApi implements ICallingServiceApi, IMessagingServiceApi {
 
     public ImiMobileApi(@Value("${app.imimobile.key}") String key,
                         @Value("${app.domainName}") String domain,
-                        @Value("${app.message.senderName:SnehaNGO}") String senderName,
-                        @Value("${app.message.senderAddress}") String senderAddress) {
+                        @Value("${app.message.senderName:SNEHAG}") String senderName,
+                        @Value("${app.message.senderAddress:SNEHAG}") String senderAddress) {
         this.key = key;
         this.domain = domain;
         this.senderName = senderName;
@@ -185,9 +185,12 @@ public class ImiMobileApi implements ICallingServiceApi, IMessagingServiceApi {
                         "\"outboundSMSTextMessage\":{\"message\":\"%s\"}," +
                         "\"messageType\":\"0\"," +
                         "\"clientCorrelator\":\"%s\"," +
+                        "\"receiptRequest\":\n" +
+                        "{\"notifyURL\":\"http://%s/api/smsresponse\",\n" +
+                        "\"callbackData\":\"$(callbackData)\"}," +
                         "\"senderName\":\"%s\"}" +
                         "}", formatPhoneNumber(phoneNumber, false), formatPhoneNumber(senderAddress, false), messageText,
-                UUID.randomUUID(), senderName);
+                UUID.randomUUID(), this.domain, this.senderName);
         return strMainContent;
     }
 
