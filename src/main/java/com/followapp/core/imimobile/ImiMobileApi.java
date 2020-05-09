@@ -136,7 +136,7 @@ public class ImiMobileApi implements ICallingServiceApi, IMessagingServiceApi {
         String requestBody = getRequestBody(phoneNumber, messageText);
         String outResponse = null;
         try {
-            LOG.debug("Sending message to {} requestBody {}", phoneNumber, requestBody);
+            LOG.info("Sending message to {} requestBody {}", phoneNumber, requestBody);
             URL url = new URL(stringUrl);
             HttpURLConnection objReq = (HttpURLConnection) url.openConnection();
             objReq.setRequestMethod("POST");
@@ -157,7 +157,7 @@ public class ImiMobileApi implements ICallingServiceApi, IMessagingServiceApi {
             StringWriter createUserwriter = new StringWriter();
             IOUtils.copy(createUserInputStream, createUserwriter, Charset.defaultCharset());
             outResponse = createUserwriter.toString();
-            LOG.debug("Successfully submitted sms request for phoneNumber {}, status {}, outResponse {}", phoneNumber, userResponseCode, outResponse);
+            LOG.info("Successfully submitted sms request for phoneNumber {}, status {}, outResponse {}", phoneNumber, userResponseCode, outResponse);
             Map map = gson.fromJson(outResponse, Map.class);
             Optional<Map> response = map.values().stream().findFirst().filter(Map.class::isInstance).map(Map.class::cast);
             outResponse = response.map(resp -> Objects.toString(resp.get("resourceURL"), null))
