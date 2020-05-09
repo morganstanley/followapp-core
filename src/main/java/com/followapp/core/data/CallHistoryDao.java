@@ -35,7 +35,7 @@ public class CallHistoryDao {
             @Override
             public Boolean doInPreparedStatement(PreparedStatement ps) throws SQLException, DataAccessException {
                 ps.setString(1, scheduleRunStatus);
-                ps.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now(ZoneOffset.UTC)));
+                ps.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
                 ps.setString(3, ivrRequestId);
                 return ps.execute();
             }
@@ -70,7 +70,7 @@ public class CallHistoryDao {
             @Override
             public Boolean doInPreparedStatement(PreparedStatement ps) throws SQLException, DataAccessException {
                 ps.setInt(1, callDuration);
-                ps.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now(ZoneOffset.UTC)));
+                ps.setTimestamp(2, Timestamp.valueOf(LocalDateTime.now()));
                 ps.setString(3, uuid);
                 return ps.execute();
             }
