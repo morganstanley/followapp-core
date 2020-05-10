@@ -1,13 +1,11 @@
 package com.followapp.core.model.sms;
 
-import java.time.LocalDateTime;
-
 public class DeliveryInfo {
     private String address;
 
     private String errorCode;
 
-    private LocalDateTime deliveryDate;
+    private String deliveryDate;
 
     private String deliveryStatus;
 
@@ -27,11 +25,11 @@ public class DeliveryInfo {
         this.errorCode = errorCode;
     }
 
-    public LocalDateTime getDeliveryDate() {
+    public String getDeliveryDate() {
         return deliveryDate;
     }
 
-    public void setDeliveryDate(LocalDateTime deliveryDate) {
+    public void setDeliveryDate(String deliveryDate) {
         this.deliveryDate = deliveryDate;
     }
 

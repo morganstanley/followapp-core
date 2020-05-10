@@ -9,7 +9,8 @@ public class DeliveryInfoNotification {
 
     private DeliveryInfo deliveryInfo;
 
-    private String RequestId;
+    @com.fasterxml.jackson.annotation.JsonProperty(value = "RequestId")
+    private String requestId;
 
     private String callbackData;
 
@@ -48,11 +49,11 @@ public class DeliveryInfoNotification {
     }
 
     public String getRequestId() {
-        return RequestId;
+        return requestId;
     }
 
     public void setRequestId(String requestId) {
-        RequestId = requestId;
+        this.requestId = requestId;
     }
 
     public String getCallbackData() {
@@ -78,7 +79,7 @@ public class DeliveryInfoNotification {
         sb.append(", senderAddress='").append(senderAddress).append('\'');
         sb.append(", clientCorrelator='").append(clientCorrelator).append('\'');
         sb.append(", deliveryInfo=").append(deliveryInfo);
-        sb.append(", RequestId='").append(RequestId).append('\'');
+        sb.append(", RequestId='").append(requestId).append('\'');
         sb.append(", callbackData='").append(callbackData).append('\'');
         sb.append(", serviceName='").append(serviceName).append('\'');
         sb.append('}');
