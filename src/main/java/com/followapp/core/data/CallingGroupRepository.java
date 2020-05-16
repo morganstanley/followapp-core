@@ -91,7 +91,8 @@ public class CallingGroupRepository {
 	 	 return callingGroups.get(0);    	
     }
 
-    public void createNewGroup(CallingGroup callingGroup) {
+    @SuppressWarnings({ "unchecked" })
+    public CallingGroup createNewGroup(CallingGroup callingGroup) {
     	
     	SimpleJdbcCall simpleJdbcCall = new SimpleJdbcCall(jdbcTemplate).withProcedureName("SP_CREATE_GROUP");    			   		
     	
@@ -101,7 +102,10 @@ public class CallingGroupRepository {
 		inParamMap.put("created_user", "admin");
 		SqlParameterSource in = new MapSqlParameterSource(inParamMap);
        
-		Map<String, Object> simpleJdbcCallResult = simpleJdbcCall.execute(in);		    	
+		Map<String, Object> simpleJdbcCallResult = simpleJdbcCall.execute(in);		
+		List<CallingGroup> callingGroups = (List<CallingGroup>) simpleJdbcCallResult.get("calling-groups");
+		
+		 return callingGroups.get(0);  
     }
     
     public void updateGroupMembership(CallingGroupUpdateMembershipRequest callingGroupUpdateMembershipRequest) {

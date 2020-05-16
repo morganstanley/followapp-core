@@ -24,9 +24,8 @@ public class CallingGroupController {
     private CallingGroupRepository callingGroupRepository;
 
     @PostMapping(path = "/create-new-group")
-    public @ResponseBody String createNewGroup(@RequestBody CallingGroup callingGroup) {        	        	
-        callingGroupRepository.createNewGroup(callingGroup);
-        return String.format("Created New Group %s", callingGroup);
+    public @ResponseBody  Optional<CallingGroup> createNewGroup(@RequestBody CallingGroup callingGroup) {        	        	
+        return Optional.ofNullable(callingGroupRepository.createNewGroup(callingGroup));       
     }
     
     @PostMapping(path = "/update-group-membership")
