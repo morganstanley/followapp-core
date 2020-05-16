@@ -10,6 +10,7 @@ import org.springframework.batch.core.configuration.annotation.JobBuilderFactory
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.configuration.support.JobRegistryBeanPostProcessor;
+import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -90,7 +91,10 @@ public class BatchConfiguration {
 
     @Bean
     public Job reminderJob() {
+        RunIdIncrementer runIdIncrementer = new RunIdIncrementer();
+        runIdIncrementer.setKey("time");
         return jobBuilderFactory.get(JOB_NAME)
+                .incrementer(runIdIncrementer)
                 .flow(reminderStep())
                 .end()
                 .build();
@@ -103,6 +107,7 @@ public class BatchConfiguration {
                 .reader(reader())
                 .processor(processor())
                 .writer(writer())
+                .allowStartIfComplete(true)
                 .build();
     }
 

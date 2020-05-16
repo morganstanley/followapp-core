@@ -1,5 +1,6 @@
 package com.followapp.core.api;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.followapp.core.data.CallHistoryDao;
 import com.followapp.core.model.CallResult;
 import com.followapp.core.model.CallStatus;
@@ -11,11 +12,15 @@ import com.followapp.core.model.sms.DeliveryInfo;
 import com.followapp.core.model.sms.DeliveryInfoNotification;
 import com.followapp.core.model.sms.DeliveryStatus;
 import com.followapp.core.services.CallingService;
+import com.followapp.core.services.CallingServiceApiAttributes;
+import com.followapp.core.services.ICallingServiceApi;
+import com.followapp.core.services.IMessagingServiceApi;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -47,11 +53,56 @@ public class CallController {
     @Autowired
     private CallHistoryDao callHistoryDao;
 
+    @Autowired
+    private ICallingServiceApi callingServiceApi;
+
+    @Autowired
+    private IMessagingServiceApi messagingServiceApi;
+
+    @Value("${app.test.endpoints.enabled:false}")
+    private boolean testEndpointEnabled;
+
+    @Value("{app.imi.call.callBackEndpoint}")
+    private String callBackEndpoint;
+
     @RequestMapping(value = "test", method = RequestMethod.GET, produces = MediaType.TEXT_PLAIN_VALUE)
     public ResponseEntity<String> testSomething() {
-        return new ResponseEntity<String>("Hello\nService is up!", HttpStatus.OK);
+        return ResponseEntity.ok("Hello\nService is up!");
     }
 
+    @RequestMapping(value="testMessage", method = RequestMethod.POST, produces = MediaType.TEXT_PLAIN_VALUE)
+    public ResponseEntity<String> testMessagingService(@RequestBody MessageRequest messageRequest) {
+        LOG.info("Request received for testMessage endpoint {}", messageRequest);
+        if (!testEndpointEnabled) {
+            LOG.info("Test endpoint is not enabled");
+            return new ResponseEntity<>("Test endpoint is disabled", HttpStatus.FORBIDDEN);
+        }
+        if (messageRequest == null || messageRequest.badRequest()) {
+            LOG.info("Bad request for testMessage endpoint");
+            return new ResponseEntity<>("phoneNumber and message are mandatory argument. " +
+                    "Example {\"phoneNumber\":\"0123456789\",\"message\":\"TestMessage\"}", HttpStatus.BAD_REQUEST);
+        }
+        String requestId = this.messagingServiceApi.sendMessage(messageRequest.getPhoneNumber(), messageRequest.getMessage());
+        return ResponseEntity.ok("Successfully called, requestId " + requestId);
+    }
+
+    @RequestMapping(value="testCall", method = RequestMethod.POST, produces = MediaType.TEXT_PLAIN_VALUE)
+    public ResponseEntity<String> testCallService(@RequestBody CallRequest callRequest) {
+        LOG.info("Request received for testCallService endpoint {}", callRequest);
+        if (!testEndpointEnabled) {
+            LOG.info("Test endpoint is not enabled");
+            return new ResponseEntity<>("Test endpoint is disabled", HttpStatus.FORBIDDEN);
+        }
+        if (callRequest == null || callRequest.badRequest()) {
+            LOG.info("Bad request for testCallService endpoint");
+            return new ResponseEntity<>("phoneNumber and message are mandatory argument. " +
+                    "Example {\"phoneNumber\":\"0123456789\",\"audioFiles\":[\"TestAudio\"],\"callFlowId\":\"777\"}", HttpStatus.BAD_REQUEST);
+        }
+        CallingServiceApiAttributes callingServiceApiAttributes = CallingServiceApiAttributes.aCallingServiceApiAttributes()
+                .callFlowId(callRequest.getCallFlowId()).callBackEndpoint(this.callBackEndpoint).build();
+        String requestId = this.callingServiceApi.call(callRequest.getPhoneNumber(), callRequest.getAudioFiles(), callingServiceApiAttributes);
+        return ResponseEntity.ok("Successfully called, requestId " + requestId);
+    }
     /**
      * Makes a call to the specified user, and initialises the audio to be
      * played when the user picks up
@@ -78,7 +129,7 @@ public class CallController {
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        return new ResponseEntity<String>("Call to " + scheduleDetail.getRecipientMobileNumber() + " has been initiated", HttpStatus.OK);
+        return ResponseEntity.ok("Call to " + scheduleDetail.getRecipientMobileNumber() + " has been initiated");
     }
 
     /**
@@ -181,5 +232,67 @@ public class CallController {
             return CallStatus.PRESCRIPTION_TAKEN;
         }
         return CallStatus.PRESCRIPTION_NOT_TAKEN;
+    }
+
+    public static class CallRequest {
+        private String phoneNumber;
+        private List<String> audioFiles;
+        private String callFlowId;
+
+        public String getPhoneNumber() {
+            return this.phoneNumber;
+        }
+
+        public void setPhoneNumber(String phoneNumber) {
+            this.phoneNumber = phoneNumber;
+        }
+
+        public List<String> getAudioFiles() {
+            return this.audioFiles;
+        }
+
+        public void setAudioFiles(List<String> audioFiles) {
+            this.audioFiles = audioFiles;
+        }
+
+        public String getCallFlowId() {
+            return this.callFlowId;
+        }
+
+        public void setCallFlowId(String callFlowId) {
+            this.callFlowId = callFlowId;
+        }
+
+        @JsonIgnore
+        public boolean badRequest() {
+            return StringUtils.isBlank(this.phoneNumber) || StringUtils.isBlank(this.callFlowId)
+                    || this.audioFiles == null || this.audioFiles.isEmpty();
+        }
+    }
+
+    public static class MessageRequest {
+        private String phoneNumber;
+        private String message;
+
+        public String getPhoneNumber() {
+            return this.phoneNumber;
+        }
+
+        public void setPhoneNumber(String phoneNumber) {
+            this.phoneNumber = phoneNumber;
+        }
+
+        public String getMessage() {
+            return this.message;
+        }
+
+        public void setMessage(String message) {
+            this.message = message;
+        }
+
+        @JsonIgnore
+        public boolean badRequest() {
+            return StringUtils.isBlank(this.phoneNumber) || StringUtils.isBlank(this.message);
+        }
     }
 } 
