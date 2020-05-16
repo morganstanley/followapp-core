@@ -48,13 +48,13 @@ public class AudioTemplateLoader {
 		this.absolutePath = absolutePath;
 		
 		languageTemplates = new HashMap<>();
-
-		for (String language : languageArray) {
-			Resource resource = new ClassPathResource("config/languageTemplates/" + language + ".txt");
-			BufferedReader br = new BufferedReader(new InputStreamReader(resource.getInputStream()));
-
-			languageTemplates.put(language, br.lines().collect(Collectors.toList()));
-		}
+//TODO:[paikar]I'll update and fix this one later today
+//		for (String language : languageArray) {
+//			Resource resource = new ClassPathResource("config/languageTemplates/" + language + ".txt");
+//			BufferedReader br = new BufferedReader(new InputStreamReader(resource.getInputStream()));
+//
+//			languageTemplates.put(language, br.lines().collect(Collectors.toList()));
+//		}
 	}
 
 	public String generate(Map<String, String> replacementMap, String maybeLanguage) {

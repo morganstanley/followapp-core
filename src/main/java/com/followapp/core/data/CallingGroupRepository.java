@@ -94,7 +94,8 @@ public class CallingGroupRepository {
     @SuppressWarnings({ "unchecked" })
     public CallingGroup createNewGroup(CallingGroup callingGroup) {
     	
-    	SimpleJdbcCall simpleJdbcCall = new SimpleJdbcCall(jdbcTemplate).withProcedureName("SP_CREATE_GROUP");    			   		
+    	SimpleJdbcCall simpleJdbcCall = new SimpleJdbcCall(jdbcTemplate).withProcedureName("SP_CREATE_GROUP")    			   		
+    	.returningResultSet("calling-groups", BeanPropertyRowMapper.newInstance(CallingGroup.class));
     	
 		Map<String, Object> inParamMap = new HashMap<String, Object>();
 		inParamMap.put("name", callingGroup.getName());
