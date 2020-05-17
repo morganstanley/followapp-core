@@ -8,14 +8,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCallback;
+import org.springframework.jdbc.core.PreparedStatementSetter;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
 
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 
 @Component
 public class CallHistoryDao {
@@ -24,6 +29,8 @@ public class CallHistoryDao {
     private static final String SAVE_CALL_HISTORY = "call update_call_status( ?, ?, ?, CURDATE(), ?)";
     private static final String SAVE_CALL_DURATION = "Update schedule_run SET call_duration = ?, updated_datetime = ? WHERE ivr_request_id = ?";
     private static final String SAVE_MESSAGE_STATUS = "Update schedule_run SET status = ?, updated_datetime = ? WHERE ivr_request_id = ?";
+    private static final String SCHEDULE_RUN_REQUEST_WITHSTATUS = "select sr.ivr_request_id from schedule_run sr" +
+            " join schedules s on s.id = sr.schedule_id and sr.status = ? and sr.run_date_time > ? and s.action_type = ?";
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -75,6 +82,11 @@ public class CallHistoryDao {
                 return ps.execute();
             }
         });
+    }
+
+    public List<String> requestWithStatus(String status, String actionType, LocalDateTime runDateTime) {
+        return this.jdbcTemplate.queryForList(SCHEDULE_RUN_REQUEST_WITHSTATUS, new Object[]{status, runDateTime, actionType}
+                , new int[]{Types.NVARCHAR, Types.TIMESTAMP, Types.NVARCHAR}, String.class);
     }
 }
 

@@ -150,6 +150,10 @@ public class ScheduleDetail {
         this.smsMetaData = smsMetaData;
     }
 
+    public SmsLanguage getSmsLanguageEnum() {
+        return SmsLanguage.find(this.smsLanguage);
+    }
+
     @Override
     public String toString() {
         final StringBuffer sb = new StringBuffer("ScheduleDetail{");
