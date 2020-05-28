@@ -8,6 +8,7 @@ import com.followapp.core.model.ImiMobileResponse;
 import com.followapp.core.model.ScheduleDetail;
 import com.followapp.core.model.ScheduleRun;
 import com.followapp.core.model.ScheduleRunStatus;
+import com.followapp.core.model.SmsLanguage;
 import com.followapp.core.model.sms.DeliveryInfo;
 import com.followapp.core.model.sms.DeliveryInfoNotification;
 import com.followapp.core.model.sms.DeliveryStatus;
@@ -80,9 +81,14 @@ public class CallController {
         if (messageRequest == null || messageRequest.badRequest()) {
             LOG.info("Bad request for testMessage endpoint");
             return new ResponseEntity<>("phoneNumber and message are mandatory argument. " +
-                    "Example {\"phoneNumber\":\"0123456789\",\"message\":\"TestMessage\"}", HttpStatus.BAD_REQUEST);
+                    "Example {\"phoneNumber\":\"0123456789\",\"message\":\"TestMessage\",\"smsLanguage\":\"HINDI\"}", HttpStatus.BAD_REQUEST);
         }
-        String requestId = this.messagingServiceApi.sendMessage(messageRequest.getPhoneNumber(), messageRequest.getMessage());
+        String requestId = null;
+        if (messageRequest.getSmsLanguageEnum() == SmsLanguage.ENGLISH) {
+            requestId = this.messagingServiceApi.sendMessage(messageRequest.getPhoneNumber(), messageRequest.getMessage());
+        } else {
+            requestId = this.messagingServiceApi.sendMessageUnicode(messageRequest.getPhoneNumber(), messageRequest.getMessage());
+        }
         return ResponseEntity.ok("Successfully called, requestId " + requestId);
     }
 
@@ -273,6 +279,7 @@ public class CallController {
     public static class MessageRequest {
         private String phoneNumber;
         private String message;
+        private String smsLanguage;
 
         public String getPhoneNumber() {
             return this.phoneNumber;
@@ -290,9 +297,22 @@ public class CallController {
             this.message = message;
         }
 
+        public String getSmsLanguage() {
+            return this.smsLanguage;
+        }
+
+        public SmsLanguage getSmsLanguageEnum() {
+            return SmsLanguage.find(this.smsLanguage);
+        }
+
+        public void setSmsLanguage(String smsLanguage) {
+            this.smsLanguage = smsLanguage;
+        }
+
         @JsonIgnore
         public boolean badRequest() {
-            return StringUtils.isBlank(this.phoneNumber) || StringUtils.isBlank(this.message);
+            return StringUtils.isBlank(this.phoneNumber) || StringUtils.isBlank(this.message)
+                    || SmsLanguage.find(this.smsLanguage) == null;
         }
     }
 } 

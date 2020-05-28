@@ -1,10 +1,12 @@
 package com.followapp.core.imimobile;
 
 
+import com.followapp.core.model.ScheduleRunStatus;
 import com.followapp.core.services.CallingServiceApiAttributes;
 import com.followapp.core.services.ICallingServiceApi;
 import com.followapp.core.services.IMessagingServiceApi;
 import com.google.gson.Gson;
+import org.apache.commons.codec.Charsets;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
@@ -12,6 +14,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
@@ -53,16 +56,20 @@ public class ImiMobileApi implements ICallingServiceApi, IMessagingServiceApi {
 
     private final String senderAddress;
 
+    private final String imiUser;
+
     private final Gson gson = new Gson();
 
     public ImiMobileApi(@Value("${app.imimobile.key}") String key,
                         @Value("${app.domainName}") String domain,
                         @Value("${app.message.senderName:SNEHAG}") String senderName,
-                        @Value("${app.message.senderAddress:SNEHAG}") String senderAddress) {
+                        @Value("${app.message.senderAddress:SNEHAG}") String senderAddress,
+                        @Value("${app.imimobile.user}") String imiUser) {
         this.key = key;
         this.domain = domain;
         this.senderName = senderName;
         this.senderAddress = senderAddress;
+        this.imiUser = imiUser;
     }
 
     @Override
@@ -142,6 +149,7 @@ public class ImiMobileApi implements ICallingServiceApi, IMessagingServiceApi {
             objReq.setRequestMethod("POST");
             objReq.setReadTimeout(50000);
             objReq.setRequestProperty("Content-type", "application/json;charset=UTF-8");
+            objReq.setRequestProperty(HttpHeaders.ACCEPT, "application/json");
             objReq.setDoOutput(true);
             objReq.setDoInput(true);
             objReq.addRequestProperty("key", key);
@@ -169,6 +177,90 @@ public class ImiMobileApi implements ICallingServiceApi, IMessagingServiceApi {
         }
     }
 
+    @Override
+    public String sendMessageUnicode(String phoneNumber, String messageText) {
+        if (StringUtils.length(phoneNumber) != 10) {
+            throw new ImiMobileApiException("Supports only 10 digit cell phone number " + phoneNumber);
+        }
+        String uuid = null;
+        HttpGet callRequest = null;
+        try (CloseableHttpClient client = HttpClientBuilder.create()
+                .setRetryHandler(new DefaultHttpRequestRetryHandler()).build()) {
+            String url = String.format("http://api-openhouse.imimobile.com/mvaayooapi/MessageCompose" +
+                            "?user=%s&senderID=%s&receipientno=%s&msgtype=4&dcs=8&ishex=1&msgtxt=%s&state=4",
+                    encode(this.imiUser), encode(this.senderName), encode(phoneNumber), encode(messageText));
+            callRequest = new HttpGet(url);
+            callRequest.addHeader(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded");
+            callRequest.addHeader("key", this.key);
+            LOG.info("Sending message to {} requestBody {}", phoneNumber, callRequest);
+
+            Optional<HttpResponse> callResponse = Optional.ofNullable(client.execute(callRequest));
+            int statusCode = callResponse.map(response -> response.getStatusLine())
+                    .map(statusLine -> statusLine.getStatusCode()).orElse(HttpStatus.SC_METHOD_FAILURE);
+            uuid = callResponse.map(response -> response.getEntity()).map(this::getResponse).orElse(null);
+            LOG.info("Successfully submitted sms request for phoneNumber {}, status {}, outResponse {}", phoneNumber, statusCode, uuid);
+            if (statusCode == HttpStatus.SC_OK && StringUtils.isNotBlank(uuid)) {
+                // Sample response -> "status=0,urn:uuid:b3698f5d-5808-404e-8a30-4e14476aa205"
+                uuid = StringUtils.trim(StringUtils.substring(uuid, StringUtils.lastIndexOf(uuid, ",") + 1));
+            } else {
+                throw new ImiMobileApiException(String.format("Outgoing message to %s failed. Status code %s. %s",
+                        phoneNumber, statusCode, callResponse.map(response -> response.getStatusLine())
+                                .map(statusLine -> statusLine.getReasonPhrase()).orElse(StringUtils.EMPTY)));
+            }
+        } catch (Exception exception) {
+            LOG.error(String.format("Failure while sending message - %s", phoneNumber), exception);
+            throw new ImiMobileApiException(String.format("Failure while sending message - %s", phoneNumber), exception);
+        } finally {
+            if (callRequest != null) {
+                callRequest.releaseConnection();
+            }
+        }
+        return uuid;
+    }
+
+    /**
+     * Sample response
+     * {
+     *   "deliveryInfoList": {
+     *     "deliveryInfo": {
+     *       "address": "917405280110",
+     *       "deliveryStatus": "Delivered"
+     *     },
+     *     "resourceURL": "/urn:uuid:b3698f5d-5808-404e-8a30-4e14476aa205/deliveryInfos"
+     *   }
+     * }
+     */
+    @Override
+    public ScheduleRunStatus getStatus(String requestId) {
+        HttpGet callRequest = null;
+        try (CloseableHttpClient client = HttpClientBuilder.create()
+                .setRetryHandler(new DefaultHttpRequestRetryHandler()).build()) {
+            String url = String.format("http://api-openhouse.imimobile.com/smsmessaging/1/outbound/tel%3A%2B/requests/%s/deliveryInfos",
+                    senderName, encode(requestId));
+            callRequest = new HttpGet(url);
+            callRequest.addHeader("key", this.key);
+
+            Optional<HttpResponse> callResponse = Optional.ofNullable(client.execute(callRequest));
+            String outResponse = callResponse.map(response -> response.getEntity()).map(entity -> getResponse(entity))
+                    .orElse(null);
+            Map map = gson.fromJson(outResponse, Map.class);
+            Optional<Map> deliveryInfoList = map.values().stream().findFirst().filter(Map.class::isInstance).map(Map.class::cast);
+            Optional<Map> deliveryInfo = deliveryInfoList.map(dil -> dil.get("")).filter(Map.class::isInstance).map(Map.class::cast);
+            return deliveryInfo.map(di -> Objects.toString(di.get("deliveryStatus"), null)).map(ScheduleRunStatus::find).orElse(ScheduleRunStatus.UNKNOWN);
+        } catch (Exception exception) {
+            LOG.error(String.format("Failure while sending message - %s", requestId), exception);
+            throw new ImiMobileApiException(String.format("Failure while sending message - %s", requestId), exception);
+        } finally {
+            if (callRequest != null) {
+                callRequest.releaseConnection();
+            }
+        }
+    }
+
+    private String encode(String urlAttributeValue) throws UnsupportedEncodingException {
+         return URLEncoder.encode(urlAttributeValue, Charsets.UTF_8.displayName());
+    }
+
     private String formatPhoneNumber(String phoneNumber, boolean countryCode) {
         if (countryCode) {
             return String.format("tel:+91%s", phoneNumber);
@@ -183,7 +275,7 @@ public class ImiMobileApi implements ICallingServiceApi, IMessagingServiceApi {
                         "\"address\":[\"%s\"]," +
                         "\"senderAddress\":\"%s\"," +
                         "\"outboundSMSTextMessage\":{\"message\":\"%s\"}," +
-                        "\"messageType\":\"0\"," +
+                        "\"messageType\":\"4\"," +
                         "\"clientCorrelator\":\"%s\"," +
                         "\"receiptRequest\":\n" +
                         "{\"notifyURL\":\"%s/api/smsresponse\",\n" +
