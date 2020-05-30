@@ -93,7 +93,7 @@ public class ScheduleRepository {
 
 	public Schedule updateSchedule(Integer scheduleId, Schedule newSchedule) {
 
-		SimpleJdbcCall simpleJdbcCall = new SimpleJdbcCall(jdbcTemplate).withProcedureName("SP_CREATE_SCHEDULE")
+		SimpleJdbcCall simpleJdbcCall = new SimpleJdbcCall(jdbcTemplate).withProcedureName("SP_UPDATE_SCHEDULE")
 				.returningResultSet("schedules", BeanPropertyRowMapper.newInstance(Schedule.class));
 
 		Map<String, Object> inParamMap = new HashMap<String, Object>();

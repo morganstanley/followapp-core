@@ -43,8 +43,8 @@ public class ScheduleController {
 	}
 	
 	@PostMapping(path = "/update/{id}")
-	public @ResponseBody Optional<Schedule> updateSchedule(@RequestBody Schedule newSchedule) {
-		return Optional.ofNullable(scheduleRepository.createNewSchedule(newSchedule));
+	public @ResponseBody Optional<Schedule> updateSchedule(@RequestBody Schedule newSchedule,@PathVariable Integer id) {
+		return Optional.ofNullable(scheduleRepository.updateSchedule(id,newSchedule));
 	}
 	
 	@DeleteMapping("/{id}")
