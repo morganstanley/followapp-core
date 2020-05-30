@@ -5,11 +5,15 @@ import java.time.LocalDateTime;
 public class Schedule {
     private Integer scheduleId;
     private Integer groupId;
+    private String groupName;
     private String description;
     private LocalDateTime executeTime;
     private ActionType actionType;
     private Integer audioFileId;
     private Integer smsContentId;
+    private String smsText;
+    private String smsLanguage;
+    private String audioFileName;
     private String status;
     private Boolean deleteFlag;
     private LocalDateTime createdDateTime;
@@ -58,7 +62,7 @@ public class Schedule {
     public Integer getAudioFileId() {
         return audioFileId;
     }
-
+    
     public void setAudioFileId(Integer audioFileId) {
         this.audioFileId = audioFileId;
     }
@@ -108,11 +112,15 @@ public class Schedule {
         final StringBuffer sb = new StringBuffer("Schedule{");
         sb.append("scheduleId=").append(scheduleId);
         sb.append(", groupId=").append(groupId);
+        sb.append(", groupName=").append(groupName);
         sb.append(", description='").append(description).append('\'');
         sb.append(", executeTime=").append(executeTime);
         sb.append(", actionType=").append(actionType);
         sb.append(", audioFileId=").append(audioFileId);
+        sb.append(", audioFileName=").append(audioFileName);
         sb.append(", smsContentId=").append(smsContentId);
+        sb.append(", smsText=").append(smsText);
+        sb.append(", smsLanguage=").append(smsLanguage);
         sb.append(", status='").append(status).append('\'');
         sb.append(", deleteFlag=").append(deleteFlag);
         sb.append(", createdDateTime=").append(createdDateTime);
@@ -120,4 +128,36 @@ public class Schedule {
         sb.append('}');
         return sb.toString();
     }
+
+	public String getSmsText() {
+		return smsText;
+	}
+
+	public void setSmsText(String smsText) {
+		this.smsText = smsText;
+	}
+
+	public String getSmsLanguage() {
+		return smsLanguage;
+	}
+
+	public void setSmsLanguage(String smsLanguage) {
+		this.smsLanguage = smsLanguage;
+	}
+
+	public String getAudioFileName() {
+		return audioFileName;
+	}
+
+	public void setAudioFileName(String audioFileName) {
+		this.audioFileName = audioFileName;
+	}
+
+	public String getGroupName() {
+		return groupName;
+	}
+
+	public void setGroupName(String groupName) {
+		this.groupName = groupName;
+	}
 }
