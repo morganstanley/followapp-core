@@ -10,6 +10,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCallback;
 import org.springframework.jdbc.core.PreparedStatementSetter;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.stereotype.Component;
 
 import java.sql.PreparedStatement;
@@ -30,10 +33,15 @@ public class CallHistoryDao {
     private static final String SAVE_CALL_DURATION = "Update schedule_run SET call_duration = ?, updated_datetime = ? WHERE ivr_request_id = ?";
     private static final String SAVE_MESSAGE_STATUS = "Update schedule_run SET status = ?, updated_datetime = ? WHERE ivr_request_id = ?";
     private static final String SCHEDULE_RUN_REQUEST_WITHSTATUS = "select sr.ivr_request_id from schedule_run sr" +
-            " join schedules s on s.id = sr.schedule_id and sr.status = ? and sr.run_date_time > ? and s.action_type = ?";
+            " join schedules s on s.id = sr.schedule_id and sr.status in (:status) and sr.run_date_time > :runDateTime and s.action_type = :actionType";
+    private JdbcTemplate jdbcTemplate;
+    private NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    public CallHistoryDao(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+        this.namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(jdbcTemplate);
+    }
 
     public void updateMessageStatus(final String ivrRequestId, final String scheduleRunStatus) {
         LOG.info("Ivr Request Id {} message status {} ", ivrRequestId, scheduleRunStatus);
@@ -84,9 +92,13 @@ public class CallHistoryDao {
         });
     }
 
-    public List<String> requestWithStatus(String status, String actionType, LocalDateTime runDateTime) {
-        return this.jdbcTemplate.queryForList(SCHEDULE_RUN_REQUEST_WITHSTATUS, new Object[]{status, runDateTime, actionType}
-                , new int[]{Types.NVARCHAR, Types.TIMESTAMP, Types.NVARCHAR}, String.class);
+    public List<String> requestWithStatus(List<String> status, String actionType, LocalDateTime runDateTime) {
+        LOG.info("Query schedule run with status {} actionType {} runDateTime", status, actionType, runDateTime);
+        MapSqlParameterSource parameters = new MapSqlParameterSource("status", status);
+        parameters.addValue("runDateTime", runDateTime);
+        parameters.addValue("actionType", actionType);
+
+        return this.namedParameterJdbcTemplate.queryForList(SCHEDULE_RUN_REQUEST_WITHSTATUS, parameters, String.class);
     }
 }
 

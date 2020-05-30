@@ -4,6 +4,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public enum ScheduleRunStatus {
@@ -17,7 +18,10 @@ public enum ScheduleRunStatus {
     UNKNOWN,
 
     SMS_DELIVERED("Delivered"),
-    SMS_DND;
+    PARTIALLY_DELIVERED,
+    SMS_DND,
+    SUBMITTED;
+
 
     private final Set<String> alias;
 
@@ -30,5 +34,19 @@ public enum ScheduleRunStatus {
     public static ScheduleRunStatus find(String value) {
         return Arrays.asList(values()).stream()
                 .filter(scheduleRunStatus -> scheduleRunStatus.alias.contains(StringUtils.upperCase(value))).findFirst().orElse(UNKNOWN);
+    }
+
+    public static ScheduleRunStatus aggregate(List<ScheduleRunStatus> scheduleRunStatuses) {
+        if (scheduleRunStatuses.stream().allMatch(scheduleRunStatus -> scheduleRunStatus == ScheduleRunStatus.SMS_DELIVERED)) {
+            return ScheduleRunStatus.SMS_DELIVERED;
+        }
+        if (scheduleRunStatuses.stream().allMatch(scheduleRunStatus -> scheduleRunStatus == ScheduleRunStatus.SUBMITTED)) {
+            return ScheduleRunStatus.SUBMITTED;
+        }
+        if (scheduleRunStatuses.stream().anyMatch(scheduleRunStatus -> scheduleRunStatus == ScheduleRunStatus.SUBMITTED) &&
+                scheduleRunStatuses.stream().anyMatch(scheduleRunStatus -> scheduleRunStatus == ScheduleRunStatus.SMS_DELIVERED)) {
+            return ScheduleRunStatus.PARTIALLY_DELIVERED;
+        }
+        return ScheduleRunStatus.UNKNOWN;
     }
 }
