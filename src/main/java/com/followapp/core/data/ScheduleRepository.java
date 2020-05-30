@@ -18,8 +18,6 @@ import com.followapp.core.model.Schedule;
 @Repository
 public class ScheduleRepository {
 
-	private static final String SQL_SOFT_DELETE_SCHEDULE = "UPDATE schedules set delete_flag=1 WHERE ID = :id";
-
 	@Autowired
 	NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
