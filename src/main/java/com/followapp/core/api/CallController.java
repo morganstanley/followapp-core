@@ -151,10 +151,7 @@ public class CallController {
     public ResponseEntity<String> getUserResponse(@RequestParam("MobileNo") String mobileNumber,
                                                   @RequestParam("DTMF") String input, @RequestHeader("x-imi-ivrs-_esb_trans_id") String uuid) {
         LOG.info("User input received for uuid {} mobile {} input {}", uuid, mobileNumber, input);
-
-        CallResult callResult = new CallResult(uuid, getStatus(StringUtils.trim(input)));
-        callHistoryDao.updateCallStatus(callResult);
-
+        callHistoryDao.updateCallStatus(StringUtils.trim(uuid), StringUtils.trim(input));
         return ResponseEntity.status(HttpStatus.OK).contentType(MediaType.parseMediaType("text/dtmf")).body("0");
     }
 
@@ -236,13 +233,6 @@ public class CallController {
             callHistoryDao.updateMessageStatus(ivrRequest, scheduleRunStatus.name());
         });
         return ResponseEntity.ok("0");
-    }
-
-    private CallStatus getStatus(String response) {
-        if (StringUtils.equals(response, "1")) {
-            return CallStatus.PRESCRIPTION_TAKEN;
-        }
-        return CallStatus.PRESCRIPTION_NOT_TAKEN;
     }
 
     public static class CallRequest {
