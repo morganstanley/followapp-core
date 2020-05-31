@@ -21,6 +21,7 @@ import org.springframework.util.LinkedCaseInsensitiveMap;
 
 import com.followapp.core.model.CallingGroup;
 import com.followapp.core.model.CallingGroupUpdateMembershipRequest;
+import com.followapp.core.model.Recipient;
 import com.microsoft.sqlserver.jdbc.SQLServerDataTable;
 import com.microsoft.sqlserver.jdbc.SQLServerException;
 
@@ -28,10 +29,10 @@ import org.springframework.jdbc.core.ResultSetExtractor;
 
 
 @Repository
-public class CallingGroupRepository {
+public class RecipientRepository {
 
-    private static final String SQL_FIND_BY_ID = "SELECT * FROM groups WHERE ID = :id";
-    private static final BeanPropertyRowMapper<CallingGroup> ROW_MAPPER = new BeanPropertyRowMapper<>(CallingGroup.class);
+    private static final String SQL_FIND_BY_ID = "SELECT * FROM recipients WHERE ID = :id";
+    private static final BeanPropertyRowMapper<Recipient> ROW_MAPPER = new BeanPropertyRowMapper<>(Recipient.class);
 
     @Autowired
     NamedParameterJdbcTemplate namedParameterJdbcTemplate;
@@ -39,7 +40,7 @@ public class CallingGroupRepository {
     @Autowired
     JdbcTemplate jdbcTemplate;
 
-    public CallingGroup findById(Integer id) {
+    public Recipient findById(Integer id) {
         try {
             final SqlParameterSource paramSource = new MapSqlParameterSource("id", id);
             return namedParameterJdbcTemplate.queryForObject(SQL_FIND_BY_ID, paramSource, ROW_MAPPER);
@@ -49,23 +50,24 @@ public class CallingGroupRepository {
         }
     }
 
-    public Iterable<CallingGroup> getAllGroups() {
+    public Iterable<Recipient> getAllRecipients() {
     	
-    	SimpleJdbcCall simpleJdbcCall = new SimpleJdbcCall(jdbcTemplate).withProcedureName("GET_GROUPS")
-    			.returningResultSet("calling-groups", BeanPropertyRowMapper.newInstance(CallingGroup.class));    			
+    	SimpleJdbcCall simpleJdbcCall = new SimpleJdbcCall(jdbcTemplate).withProcedureName("GET_RECIPIENTS")
+    			.returningResultSet("recipients", BeanPropertyRowMapper.newInstance(Recipient.class));    			
     	
 		Map<String, Object> simpleJdbcCallResult = simpleJdbcCall.execute();    
 		
-		List<CallingGroup> callingGroups = (List<CallingGroup>) simpleJdbcCallResult.get("calling-groups");
+		List<Recipient> recipients = (List<Recipient>) simpleJdbcCallResult.get("recipients");
     	
-        return callingGroups;                                
+        return recipients;                                
     }
     
+    //check if needed
     @SuppressWarnings({ "rawtypes", "unchecked" })
 	public CallingGroup getCallingGroupById(Integer id) {
     	
     	SimpleJdbcCall simpleJdbcCall = new SimpleJdbcCall(jdbcTemplate).withProcedureName("GET_CALLING_GROUP_DETAILS")
-    			.returningResultSet("calling-groups", BeanPropertyRowMapper.newInstance(CallingGroup.class));    			
+    			.returningResultSet("recipients", BeanPropertyRowMapper.newInstance(CallingGroup.class));    			
     	
 		Map<String, Object> inParamMap = new HashMap<String, Object>();
 		inParamMap.put("id", id);
@@ -91,24 +93,22 @@ public class CallingGroupRepository {
 	 	 return callingGroups.get(0);    	
     }
 
-    @SuppressWarnings({ "unchecked" })
-    public CallingGroup createNewGroup(CallingGroup callingGroup) {
+    public void createRecipient(Recipient recipient) {
     	
-    	SimpleJdbcCall simpleJdbcCall = new SimpleJdbcCall(jdbcTemplate).withProcedureName("SP_CREATE_GROUP")    			   		
-    	.returningResultSet("calling-groups", BeanPropertyRowMapper.newInstance(CallingGroup.class));
+    	SimpleJdbcCall simpleJdbcCall = new SimpleJdbcCall(jdbcTemplate).withProcedureName("SP_CREATE_RECIPIENT");    			   		
     	
 		Map<String, Object> inParamMap = new HashMap<String, Object>();
-		inParamMap.put("name", callingGroup.getName());
-		inParamMap.put("description", callingGroup.getDescription());
+		inParamMap.put("name", recipient.getName());
+		inParamMap.put("mobile", recipient.getMobile());
+		inParamMap.put("gender", recipient.getGender());
+		inParamMap.put("zone", recipient.getZone());		
 		inParamMap.put("created_user", "admin");
 		SqlParameterSource in = new MapSqlParameterSource(inParamMap);
        
-		Map<String, Object> simpleJdbcCallResult = simpleJdbcCall.execute(in);		
-		List<CallingGroup> callingGroups = (List<CallingGroup>) simpleJdbcCallResult.get("calling-groups");
-		
-		 return callingGroups.get(0);  
+		Map<String, Object> simpleJdbcCallResult = simpleJdbcCall.execute(in);		    	
     }
-    
+
+    //check if needed
     public void updateGroupMembership(CallingGroupUpdateMembershipRequest callingGroupUpdateMembershipRequest) {
     	
     	SimpleJdbcCall simpleJdbcCall = new SimpleJdbcCall(jdbcTemplate).withProcedureName("UPDATE_CALLING_GROUP_MEMBERSHIP_LIST");    			   		
@@ -149,8 +149,7 @@ public class CallingGroupRepository {
 
     public void deleteById(Integer id) {
     	
-    	SimpleJdbcCall simpleJdbcCall = new SimpleJdbcCall(jdbcTemplate).withProcedureName("SP_DELETE_GROUP")
-    			.returningResultSet("calling-groups", BeanPropertyRowMapper.newInstance(CallingGroup.class));    			
+    	SimpleJdbcCall simpleJdbcCall = new SimpleJdbcCall(jdbcTemplate).withProcedureName("SP_DELETE_RECIPIENT");    			
     	
 		Map<String, Object> inParamMap = new HashMap<String, Object>();
 		inParamMap.put("id", id);
