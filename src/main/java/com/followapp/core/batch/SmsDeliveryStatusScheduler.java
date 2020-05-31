@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Component
 @Configuration
@@ -25,6 +26,8 @@ public class SmsDeliveryStatusScheduler {
 
     @Scheduled(cron = "0 ${app.scheduler.batchTriggerTime} 6 * * *")
     public void noResponseRequestCheck() {
-        this.smsDeliveryStatusService.process(ScheduleRunStatus.IVR_REQUESTED, ActionType.SMS, LocalDate.now().atStartOfDay());
+        LOG.info("Schedule run for sms delivery status {}", LocalDateTime.now());
+        this.smsDeliveryStatusService.process(ActionType.SMS, LocalDate.now().atStartOfDay(),
+                ScheduleRunStatus.IVR_REQUESTED, ScheduleRunStatus.PARTIALLY_DELIVERED, ScheduleRunStatus.SUBMITTED);
     }
 }

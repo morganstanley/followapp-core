@@ -2,9 +2,13 @@ package com.followapp.core.imimobile;
 
 
 import com.followapp.core.model.ScheduleRunStatus;
+import com.followapp.core.model.sms.DeliveryInfo;
+import com.followapp.core.model.sms.DeliveryInfoList;
+import com.followapp.core.model.sms.SmsDeliveryQueryResponse;
 import com.followapp.core.services.CallingServiceApiAttributes;
 import com.followapp.core.services.ICallingServiceApi;
 import com.followapp.core.services.IMessagingServiceApi;
+import com.followapp.core.utils.JsonUtils;
 import com.google.gson.Gson;
 import org.apache.commons.codec.Charsets;
 import org.apache.commons.io.IOUtils;
@@ -36,12 +40,14 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Component
 public class ImiMobileApi implements ICallingServiceApi, IMessagingServiceApi {
@@ -235,21 +241,25 @@ public class ImiMobileApi implements ICallingServiceApi, IMessagingServiceApi {
         HttpGet callRequest = null;
         try (CloseableHttpClient client = HttpClientBuilder.create()
                 .setRetryHandler(new DefaultHttpRequestRetryHandler()).build()) {
-            String url = String.format("http://api-openhouse.imimobile.com/smsmessaging/1/outbound/tel%3A%2B/requests/%s/deliveryInfos",
-                    senderName, encode(requestId));
+            String url = String.format("http://api-openhouse.imimobile.com/smsmessaging/1/outbound/%s/requests/%s/deliveryInfos",
+                    encode("tel:+"), encode(requestId));
             callRequest = new HttpGet(url);
             callRequest.addHeader("key", this.key);
 
             Optional<HttpResponse> callResponse = Optional.ofNullable(client.execute(callRequest));
             String outResponse = callResponse.map(response -> response.getEntity()).map(entity -> getResponse(entity))
                     .orElse(null);
-            Map map = gson.fromJson(outResponse, Map.class);
-            Optional<Map> deliveryInfoList = map.values().stream().findFirst().filter(Map.class::isInstance).map(Map.class::cast);
-            Optional<Map> deliveryInfo = deliveryInfoList.map(dil -> dil.get("")).filter(Map.class::isInstance).map(Map.class::cast);
-            return deliveryInfo.map(di -> Objects.toString(di.get("deliveryStatus"), null)).map(ScheduleRunStatus::find).orElse(ScheduleRunStatus.UNKNOWN);
+
+            List<ScheduleRunStatus> scheduleRunStatuses = Optional.ofNullable(JsonUtils.unMarshall(outResponse, SmsDeliveryQueryResponse.class))
+                    .map(SmsDeliveryQueryResponse::deliveryInfoList)
+                    .map(DeliveryInfoList::deliveryInfo).orElse(Collections.emptyList())
+                    .stream().map(DeliveryInfo::deliveryStatus)
+                    .map(ScheduleRunStatus::find)
+                    .collect(Collectors.toList());
+            return ScheduleRunStatus.aggregate(scheduleRunStatuses);
         } catch (Exception exception) {
-            LOG.error(String.format("Failure while sending message - %s", requestId), exception);
-            throw new ImiMobileApiException(String.format("Failure while sending message - %s", requestId), exception);
+            LOG.error(String.format("Failure while fetching sms delivery status for request - %s", requestId), exception);
+            throw new ImiMobileApiException(String.format("Failure while fetching sms delivery status for request - %s", requestId), exception);
         } finally {
             if (callRequest != null) {
                 callRequest.releaseConnection();

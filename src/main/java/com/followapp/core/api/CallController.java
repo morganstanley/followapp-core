@@ -16,6 +16,7 @@ import com.followapp.core.services.CallingService;
 import com.followapp.core.services.CallingServiceApiAttributes;
 import com.followapp.core.services.ICallingServiceApi;
 import com.followapp.core.services.IMessagingServiceApi;
+import com.followapp.core.utils.JsonUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,8 +34,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Root resource (exposed at "API" path)
@@ -218,17 +221,19 @@ public class CallController {
      * }
      */
     @RequestMapping(value = "smsresponse", method = RequestMethod.POST)
-    public ResponseEntity<String> getSmsResponse(@RequestBody DeliveryStatus deliveryStatus) {
-        LOG.info("Sms response received {}", deliveryStatus);
-        Optional<String> ivrRequestId = Optional.ofNullable(deliveryStatus).map(DeliveryStatus::getDeliveryInfoNotification)
-                .map(DeliveryInfoNotification::getRequestId);
+    public ResponseEntity<String> getSmsResponse(@RequestBody String deliveryStatusString) {
+        LOG.info("Sms response received {}", deliveryStatusString);
+        DeliveryStatus deliveryStatus = JsonUtils.unMarshall(deliveryStatusString, DeliveryStatus.class);
+        Optional<String> ivrRequestId = Optional.ofNullable(deliveryStatus).map(DeliveryStatus::deliveryInfoNotification)
+                .map(DeliveryInfoNotification::requestId);
         ivrRequestId.ifPresent(ivrRequest -> {
-            Optional<String> messageDeliveryStatus = Optional.ofNullable(deliveryStatus).map(DeliveryStatus::getDeliveryInfoNotification)
-                    .map(DeliveryInfoNotification::getDeliveryInfo).map(DeliveryInfo::getDeliveryStatus);
-            messageDeliveryStatus.ifPresent(status -> {
-                ScheduleRunStatus scheduleRunStatus = ScheduleRunStatus.find(status);
-                callHistoryDao.updateMessageStatus(ivrRequest, scheduleRunStatus.name());
-            });
+            List<ScheduleRunStatus> messageDeliveryStatus = Optional.ofNullable(deliveryStatus).map(DeliveryStatus::deliveryInfoNotification)
+                    .map(DeliveryInfoNotification::deliveryInfo).orElse(Collections.emptyList())
+                    .stream().map(DeliveryInfo::deliveryStatus)
+                    .map(ScheduleRunStatus::find)
+                    .collect(Collectors.toList());
+            ScheduleRunStatus scheduleRunStatus = ScheduleRunStatus.aggregate(messageDeliveryStatus);
+            callHistoryDao.updateMessageStatus(ivrRequest, scheduleRunStatus.name());
         });
         return ResponseEntity.ok("0");
     }
