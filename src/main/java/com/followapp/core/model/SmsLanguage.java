@@ -4,7 +4,12 @@ import java.util.Arrays;
 
 public enum SmsLanguage {
     ENGLISH,
-    HINDI;
+    HINDI,
+	MARATHI,
+	TAMIL,
+	URDU,
+	KANNADA,
+	GUJRATHI;
 
     public static SmsLanguage find(String value) {
         return Arrays.asList(values()).stream().filter(smsLanguage -> smsLanguage.name().equalsIgnoreCase(value))
