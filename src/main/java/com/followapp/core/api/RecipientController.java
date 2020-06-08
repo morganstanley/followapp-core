@@ -24,7 +24,13 @@ public class RecipientController {
         recipientRepository.createRecipient(recipient);
         return String.format("Created New Recipient %s", recipient);
     }
-    
+
+    @PostMapping(path = "/updateRecipient/{id}")
+    public @ResponseBody String updateRecipient(@RequestBody Recipient recipient, @PathVariable Integer id) {
+        recipientRepository.updateRecipient(recipient, id);
+        return String.format("Updated Recipient %s", id);
+    }
+
     @PostMapping(path = "/update-group-membership")
     public @ResponseBody String updateGroupMembership(@RequestBody CallingGroupUpdateMembershipRequest callingGroupUpdateMembershipRequest) {        	        	
         recipientRepository.updateGroupMembership(callingGroupUpdateMembershipRequest);

@@ -108,6 +108,19 @@ public class RecipientRepository {
 		Map<String, Object> simpleJdbcCallResult = simpleJdbcCall.execute(in);		    	
     }
 
+    public void updateRecipient(Recipient recipient, int recipientId) {
+        SimpleJdbcCall simpleJdbcCall = new SimpleJdbcCall(jdbcTemplate).withProcedureName("");
+
+        Map<String, Object> inParamMap = new HashMap<>();
+        inParamMap.put("name", recipient.getName());
+        inParamMap.put("mobile", recipient.getMobile());
+        inParamMap.put("gender", recipient.getGender());
+        inParamMap.put("zone", recipient.getZone());
+        inParamMap.put("updated_user", "admin");inParamMap.put("id", recipientId);
+
+        simpleJdbcCall.execute(new MapSqlParameterSource(inParamMap));
+    }
+
     //check if needed
     public void updateGroupMembership(CallingGroupUpdateMembershipRequest callingGroupUpdateMembershipRequest) {
     	
