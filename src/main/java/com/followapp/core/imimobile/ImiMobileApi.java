@@ -68,8 +68,8 @@ public class ImiMobileApi implements ICallingServiceApi, IMessagingServiceApi {
 
     public ImiMobileApi(@Value("${app.imimobile.key}") String key,
                         @Value("${app.domainName}") String domain,
-                        @Value("${app.message.senderName:SNEHAG}") String senderName,
-                        @Value("${app.message.senderAddress:SNEHAG}") String senderAddress,
+                        @Value("${app.message.senderName:SNEHAM}") String senderName,
+                        @Value("${app.message.senderAddress:SNEHAM}") String senderAddress,
                         @Value("${app.imimobile.user}") String imiUser) {
         this.key = key;
         this.domain = domain;
